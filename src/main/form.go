@@ -3,8 +3,8 @@ package main
 import (
 	"mime/multipart"
 	"os"
-	"bufio"
 	"io/ioutil"
+  "io"
 )
 
 type HttpForm struct {
@@ -13,7 +13,7 @@ type HttpForm struct {
 	Company      string `form:"company"`
 	ActivityCode string `form:"ActivityCode"`
 	ProdName     string `form:"prodname"` 
-	SerNo	     string `form:"serno"`
+	SerNo	       string `form:"serno"`
 	Message      string `form:"message"`
 	
 	File         *multipart.FileHeader `form:"file"`
@@ -36,7 +36,7 @@ type BusinessActivity struct {
   AttachmentName *string
 }
 
-var activityCodes = map[string]string{
+var activityCodes = map[string]string {
 	"TS": "Tech Support",
 	"COM": "Complaint",
 	"IR": "Information Request",
@@ -87,11 +87,14 @@ func BuildBusinessActivity(form HttpForm) (*BusinessActivity, error) {
 		if uploadedFile, err := form.File.Open(); err != nil {
 			return nil, err
 		} else {
+      defer uploadedFile.Close()
+
 			if f, err := ioutil.TempFile(os.TempDir(), "-upload-"); err != nil {
 				return nil, err
 			} else {
-				w := bufio.NewWriter(f)
-				if _, err := bufio.NewReader(uploadedFile).WriteTo(w); err != nil {
+        defer f.Close()
+
+				if _, err := io.Copy(f, uploadedFile); err != nil {
 					return nil, err
 				} else {
           attachmentPath := f.Name()
